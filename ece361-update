@@ -22,7 +22,9 @@ function update_update() {
     # Updates the update script... if need be (needs to have sudo access)
     if [[ `sudo -n echo ok` != "ok" ]]; then
         yellow_desc "This script can only be run by a user with sudo access without prompt"
-        return 255
+        echo
+        yellow_desc "Aborting update"
+        exit 255
     fi
 
     # First check if update script is available on GitHub, see is curl'ing it fails
@@ -32,24 +34,27 @@ function update_update() {
         yellow_desc "\tUpdate may still work, assuming this script is already up-to-date"
         #return 255
     else
+        # TODO: make this more network efficient... currently curls multiple times to same addr
         # Check this script against the one online (assumes one online is always up-to-date)
         CURR_LOC=`dirname "$0"`
         if [[ "${CURR_LOC}" =~ "/dev/" ]]; then
             # Script is being executed by piping it through stdin or a local file descriptor
-            # Avoid making backups or diff'ing of current file and make assumption about its location
+            # No current file to diff or backup, just make assumption about target location
             CURR_NAME=`basename ${UPDATE_SCRIPT_URL}`
-            TARGET=/usr/local/bin/${CURR_NAME}
+            CURR_LOC=/usr/local/bin
 
-            if [[ -f ${TARGET} ]]; then
-                sudo cp ${TARGET} ${TARGET}.backup
+            if [[ -f ${CURR_LOC}/${CURR_NAME} ]]; then
+                TIMESTAMP=`date +%s`
+                blue_desc "Saving backup of current script to ${CURR_LOC}/.${CURR_NAME}.${TIMESTAMP}"
+                sudo cp ${CURR_LOC}/${CURR_NAME} ${CURR_LOC}/.${CURR_NAME}.${TIMESTAMP}
             fi
-            sudo wget -q -O ${TARGET} ${UPDATE_SCRIPT_URL}
-            sudo chmod +x ${TARGET}
+            sudo wget -q -O ${CURR_LOC}/${CURR_NAME} ${UPDATE_SCRIPT_URL}
+            sudo chmod +x ${CURR_LOC}/${CURR_NAME}
 
             # Execute script after 3 seconds and exit
             blue_desc "Successfully updated ${CURR_NAME}"
             blue_desc "Exiting and executing new script in 3 seconds..."
-            sleep 3 && ${TARGET} &
+            sleep 3 && ${CURR_LOC}/${CURR_NAME} &
             exit 0
         else
             CURR_NAME=`basename "$0"`
@@ -57,9 +62,11 @@ function update_update() {
 
             if [[ -n ${DIFF} ]]; then
                 # Save backup of current script and update the current script
-                blue_desc "Saving backup of current script to ${CURR_LOC}/${CURR_NAME}.backup"
-                sudo cp ${CURR_LOC}/${CURR_NAME} ${CURR_LOC}/${CURR_NAME}.backup
+                TIMESTAMP=`date +%s`
+                blue_desc "Saving backup of current script to ${CURR_LOC}/.${CURR_NAME}.${TIMESTAMP}"
+                sudo cp ${CURR_LOC}/${CURR_NAME} ${CURR_LOC}/.${CURR_NAME}.${TIMESTAMP}
                 sudo wget -q -O ${CURR_LOC}/${CURR_NAME} ${UPDATE_SCRIPT_URL}
+                sudo chmod +x ${CURR_LOC}/${CURR_NAME}
 
                 # Execute script after 3 seconds and exit
                 blue_desc "Successfully updated ${CURR_NAME}"
@@ -80,16 +87,13 @@ function update_ryu() {
 if [[ `ping -q -w 1 -c 1 8.8.8.8 > /dev/null && echo 'ok'` = 'ok' ]]; then
     # Check if update script itself needs updating
     update_update
-    if [[ $? -gt 0 ]]; then
-        echo
-        yellow_desc "Aborting update"
-        exit $?
-    fi
 
     update_ryu
 else
     # Check using 8.8.4.4
     if [[ `ping -q -w 1 -c 1 8.8.4.4 > /dev/null && echo 'ok'` = 'ok' ]]; then
+        update_update
+
         update_ryu
     else
         # Assuming it's a DHCP issue, try pinging gateway
@@ -97,13 +101,15 @@ else
 
         if [[ `ping -q -w 1 -c 1 ${GATEWAY} > /dev/null && echo 'ok'` = 'ok' ]]; then
             # Gateway seems fine, but not internet... nothing we can do here
-            echo "Cannot access the Internet, check your connectivity"
+            yellow_desc "Cannot access the Internet, check your connectivity"
         else
             # Assuming it's a DHCP issue, try to re-acquire IP address
-            echo "Cannot contact gateway. Trying to reset eth0..."
+            yellow_desc "Cannot contact gateway. Trying to reset eth0..."
             ifdown eth0
             sleep 1
             ifup eth0
+
+            yellow_desc "Check your internet connectivity, and re-run this script once verified"
         fi
     fi
 fi
