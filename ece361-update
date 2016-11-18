@@ -34,20 +34,39 @@ function update_update() {
     else
         # Check this script against the one online (assumes one online is always up-to-date)
         CURR_LOC=`dirname "$0"`
-        CURR_NAME=`basename "$0"`
-        DIFF=`diff ${CURR_LOC}/${CURR_NAME} <(curl -s ${UPDATE_SCRIPT_URL})`
+        if [[ "${CURR_LOC}" =~ "/dev/" ]]; then
+            # Script is being executed by piping it through stdin or a local file descriptor
+            # Avoid making backups or diff'ing of current file and make assumption about its location
+            CURR_NAME=`basename ${UPDATE_SCRIPT_URL}`
+            TARGET=/usr/local/bin/${CURR_NAME}
 
-        if [[ -n ${DIFF} ]]; then
-            # Save backup of current script and update the current script
-            blue_desc "Saving backup of current script to ${CURR_LOC}/${CURR_NAME}.backup"
-            sudo cp ${CURR_LOC}/${CURR_NAME} ${CURR_LOC}/${CURR_NAME}.backup
-            sudo wget -q -O ${CURR_LOC}/${CURR_NAME} ${UPDATE_SCRIPT_URL}
+            if [[ -f ${TARGET} ]]; then
+                sudo cp ${TARGET} ${TARGET}.backup
+            fi
+            sudo wget -q -O ${TARGET} ${UPDATE_SCRIPT_URL}
+            sudo chmod +x ${TARGET}
 
             # Execute script after 3 seconds and exit
             blue_desc "Successfully updated ${CURR_NAME}"
             blue_desc "Exiting and executing new script in 3 seconds..."
-            sleep 3 && ${CURR_LOC}/${CURR_NAME} &
+            sleep 3 && ${TARGET} &
             exit 0
+        else
+            CURR_NAME=`basename "$0"`
+            DIFF=`diff ${CURR_LOC}/${CURR_NAME} <(curl -s ${UPDATE_SCRIPT_URL})`
+
+            if [[ -n ${DIFF} ]]; then
+                # Save backup of current script and update the current script
+                blue_desc "Saving backup of current script to ${CURR_LOC}/${CURR_NAME}.backup"
+                sudo cp ${CURR_LOC}/${CURR_NAME} ${CURR_LOC}/${CURR_NAME}.backup
+                sudo wget -q -O ${CURR_LOC}/${CURR_NAME} ${UPDATE_SCRIPT_URL}
+
+                # Execute script after 3 seconds and exit
+                blue_desc "Successfully updated ${CURR_NAME}"
+                blue_desc "Exiting and executing new script in 3 seconds..."
+                sleep 3 && ${CURR_LOC}/${CURR_NAME} &
+                exit 0
+            fi
         fi
     fi
 }
