@@ -1,0 +1,10 @@
+#!/bin/bash
+EXISTING_RYU_PID=`ps aux | grep ryu-manager | grep python | awk '{print $2}'`
+
+if [[ -n ${EXISTING_RYU_PID} ]]; then
+    sudo kill -9 ${EXISTING_RYU_PID}
+    echo "Killed Ryu instance with PID ${EXISTING_RYU_PID}"
+else
+    echo "No current instance of Ryu found to be running"
+fi
+

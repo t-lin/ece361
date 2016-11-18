@@ -1,0 +1,30 @@
+#!/bin/bash
+
+function update_ryu() {
+    cd /home/ubuntu/ryu && echo "Updating Ryu..." && sudo git pull -f origin of_lab
+    cd /usr/lib/python2.7/ryu_ofctl && echo "Updating ryu_ofctl..." && sudo git pull -f origin master
+}
+
+if [[ `ping -q -w 1 -c 1 8.8.8.8 > /dev/null && echo 'ok'` = 'ok' ]]; then
+    update_ryu
+else
+    # Check using 8.8.4.4
+    if [[ `ping -q -w 1 -c 1 8.8.4.4 > /dev/null && echo 'ok'` = 'ok' ]]; then
+        update_ryu
+    else
+        # Assuming it's a DHCP issue, try pinging gateway
+        GATEWAY=`ip route | grep default | cut -d ' ' -f 3`
+
+        if [[ `ping -q -w 1 -c 1 ${GATEWAY} > /dev/null && echo 'ok'` = 'ok' ]]; then
+            # Gateway seems fine, but not internet... nothing we can do here
+            echo "Cannot access the Internet, check your connectivity"
+        else
+            # Assuming it's a DHCP issue, try to re-acquire IP address
+            echo "Cannot contact gateway. Trying to reset eth0..."
+            ifdown eth0
+            sleep 1
+            ifup eth0
+        fi
+    fi
+fi
+
