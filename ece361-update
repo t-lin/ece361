@@ -1,11 +1,72 @@
 #!/bin/bash
+# Thomas Lin (2016):
+#   Update script for the ECE361 VM image
+
+# Blue: "\e[1;34;40m $1 \e[0m"
+# Yellow: "\e[1;33;40m $1 \e[0m"
+# Green: "\e[1;32;40m $1 \e[0m"
+function green_desc() {
+    echo -e "\e[1;32;40m$1\e[0m"
+}
+
+function blue_desc() {
+    echo -e "\e[1;34;40m$1\e[0m"
+}
+
+function yellow_desc() {
+    echo -e "\e[1;33;40m$1\e[0m"
+}
+
+# Returns 255 (think signed char) on un-recoverable error
+function update_update() {
+    # Updates the update script... if need be (needs to have sudo access)
+    if [[ `sudo -n echo ok` != "ok" ]]; then
+        yellow_desc "This script can only be run by a user with sudo access without prompt"
+        return 255
+    fi
+
+    # First check if update script is available on GitHub, see is curl'ing it fails
+    UPDATE_SCRIPT_URL=https://raw.githubusercontent.com/t-lin/ece361-vm/master/ece361-update
+    if [[ -z `curl -s -f ${UPDATE_SCRIPT_URL}` ]]; then
+        yellow_desc "Unable to fetch latest update script"
+        yellow_desc "\tUpdate may still work, assuming this script is already up-to-date"
+        #return 255
+    else
+        # Check this script against the one online (assumes one online is always up-to-date)
+        CURR_LOC=`dirname "$0"`
+        CURR_NAME=`basename "$0"`
+        DIFF=`diff ${CURR_LOC}/${CURR_NAME} <(curl -s ${UPDATE_SCRIPT_URL})`
+
+        if [[ -n ${DIFF} ]]; then
+            # Save backup of current script and update the current script
+            blue_desc "Saving backup of current script to ${CURR_LOC}/${CURR_NAME}.backup"
+            sudo cp ${CURR_LOC}/${CURR_NAME} ${CURR_LOC}/${CURR_NAME}.backup
+            sudo wget -q -O ${CURR_LOC}/${CURR_NAME} ${UPDATE_SCRIPT_URL}
+
+            # Execute script after 3 seconds and exit
+            blue_desc "Successfully updated ${CURR_NAME}"
+            blue_desc "Exiting and executing new script in 3 seconds..."
+            sleep 3 && ${CURR_LOC}/${CURR_NAME} &
+            exit 0
+        fi
+    fi
+}
 
 function update_ryu() {
     cd /home/ubuntu/ryu && echo "Updating Ryu..." && sudo git pull -f origin of_lab
     cd /usr/lib/python2.7/ryu_ofctl && echo "Updating ryu_ofctl..." && sudo git pull -f origin master
 }
 
+# Check internet connectivity first
 if [[ `ping -q -w 1 -c 1 8.8.8.8 > /dev/null && echo 'ok'` = 'ok' ]]; then
+    # Check if update script itself needs updating
+    update_update
+    if [[ $? -gt 0 ]]; then
+        echo
+        yellow_desc "Aborting update"
+        exit $?
+    fi
+
     update_ryu
 else
     # Check using 8.8.4.4
