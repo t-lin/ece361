@@ -17,65 +17,36 @@ function yellow_desc() {
     echo -e "\e[1;33;40m$1\e[0m"
 }
 
-# Returns 255 (think signed char) on un-recoverable error
+# Clones the ece361-vm repo and checks if the update script is itself updated
+# Re-executes update script if it is newer, else returns path to the repo
 function update_update() {
-    # Updates the update script... if need be (needs to have sudo access)
-    if [[ `sudo -n echo ok` != "ok" ]]; then
-        yellow_desc "This script can only be run by a user with sudo access without prompt"
-        echo
-        yellow_desc "Aborting update"
-        exit 255
-    fi
+    TMPDIR=`mktemp -d`
+    cd ${TMPDIR} && git clone -q https://github.com/t-lin/ece361-vm.git && cd ${TMPDIR}/ece361-vm
 
-    # First check if update script is available on GitHub, see is curl'ing it fails
-    UPDATE_SCRIPT_URL=https://raw.githubusercontent.com/t-lin/ece361-vm/master/ece361-update
-    if [[ -z `curl -s -f ${UPDATE_SCRIPT_URL}` ]]; then
-        yellow_desc "Unable to fetch latest update script"
-        yellow_desc "\tUpdate may still work, assuming this script is already up-to-date"
-        #return 255
-    else
-        # TODO: make this more network efficient... currently curls multiple times to same addr
-        # Check this script against the one online (assumes one online is always up-to-date)
-        CURR_LOC=`dirname "$0"`
-        if [[ "${CURR_LOC}" =~ "/dev/" ]]; then
-            # Script is being executed by piping it through stdin or a local file descriptor
-            # No current file to diff or backup, just make assumption about target location
-            CURR_NAME=`basename ${UPDATE_SCRIPT_URL}`
-            CURR_LOC=/usr/local/bin
-
-            if [[ -f ${CURR_LOC}/${CURR_NAME} ]]; then
-                TIMESTAMP=`date +%s`
-                blue_desc "Saving backup of current script to ${CURR_LOC}/.${CURR_NAME}.${TIMESTAMP}"
-                sudo cp ${CURR_LOC}/${CURR_NAME} ${CURR_LOC}/.${CURR_NAME}.${TIMESTAMP}
-            fi
-            sudo wget -q -O ${CURR_LOC}/${CURR_NAME} ${UPDATE_SCRIPT_URL}
-            sudo chmod +x ${CURR_LOC}/${CURR_NAME}
-
-            # Execute script after 3 seconds and exit
-            blue_desc "Successfully updated ${CURR_NAME}"
-            blue_desc "Exiting and executing new script in 3 seconds..."
-            sleep 3 && ${CURR_LOC}/${CURR_NAME} &
-            exit 0
-        else
-            CURR_NAME=`basename "$0"`
-            DIFF=`diff ${CURR_LOC}/${CURR_NAME} <(curl -s ${UPDATE_SCRIPT_URL})`
-
-            if [[ -n ${DIFF} ]]; then
-                # Save backup of current script and update the current script
-                TIMESTAMP=`date +%s`
-                blue_desc "Saving backup of current script to ${CURR_LOC}/.${CURR_NAME}.${TIMESTAMP}"
-                sudo cp ${CURR_LOC}/${CURR_NAME} ${CURR_LOC}/.${CURR_NAME}.${TIMESTAMP}
-                sudo wget -q -O ${CURR_LOC}/${CURR_NAME} ${UPDATE_SCRIPT_URL}
-                sudo chmod +x ${CURR_LOC}/${CURR_NAME}
-
-                # Execute script after 3 seconds and exit
-                blue_desc "Successfully updated ${CURR_NAME}"
-                blue_desc "Exiting and executing new script in 3 seconds..."
-                sleep 3 && ${CURR_LOC}/${CURR_NAME} &
-                exit 0
-            fi
+    SCRIPT_DIR=/usr/local/bin
+    UPDATE_SCRIPT=ece361-update
+    if [[ -f ${SCRIPT_DIR}/${UPDATE_SCRIPT} ]]; then
+        DIFF=`diff ${SCRIPT_DIR}/${UPDATE_SCRIPT} ${UPDATE_SCRIPT}`
+        if [[ -n ${DIFF} ]]; then
+            # Save backup of current script and update the current script
+            TIMESTAMP=`date +%s`
+            blue_desc "Saving backup of current script to ${SCRIPT_DIR}/.${UPDATE_SCRIPT}.${TIMESTAMP}"
+            sudo mv ${SCRIPT_DIR}/${UPDATE_SCRIPT} ${SCRIPT_DIR}/.${UPDATE_SCRIPT}.${TIMESTAMP}
         fi
     fi
+
+    # Have this case separate (i.e. not 'else' of previous), in case script was moved due to diff
+    if [[ ! -f ${SCRIPT_DIR}/${UPDATE_SCRIPT} ]]; then
+        # Copy script and execute it after 3 seconds and exit
+        sudo cp ${UPDATE_SCRIPT} ${SCRIPT_DIR}/${UPDATE_SCRIPT}
+        sudo chmod +x ${SCRIPT_DIR}/${UPDATE_SCRIPT}
+        green_desc "Successfully updated ${UPDATE_SCRIPT}"
+        blue_desc "Exiting and executing new script in 3 seconds..."
+        sleep 3 && ${SCRIPT_DIR}/${UPDATE_SCRIPT} `pwd` &
+        exit 0
+    fi
+
+    TMPDIR=`pwd`
 }
 
 function update_ryu() {
@@ -97,6 +68,7 @@ function update_ryu() {
     fi
 }
 
+# Package installations and any other configuration modifications
 function update_vm() {
     echo && blue_desc "Updating packages..."
     sudo apt-get update
@@ -106,33 +78,70 @@ function update_vm() {
 
     # Configurations
     echo && blue_desc "Checking configurations..."
-    # Set VNC password to 'ece361'
+
+    # Set VNC password to 'ece361' and configure for LXDE
     vncpasswd << EOF
 ece361
 ece361
 EOF
 }
 
-# Check internet connectivity first
-if [[ `ping -q -w 1 -c 1 8.8.8.8 > /dev/null && echo 'ok'` = 'ok' ]]; then
+# Expects to be called with a single input parameter, the directory where the ece361-vm repo is
+function update_misc() {
+    cd $1
+
+    TIMESTAMP=`date +%s`
+    SCRIPT_DIR=/usr/local/bin
+    if [[ -f ${SCRIPT_DIR}/ece361-start-controller ]]; then
+        sudo mv ${SCRIPT_DIR}/ece361-start-controller ${SCRIPT_DIR}/.ece361-start-controller.${TIMESTAMP}
+    fi
+    sudo cp ece361-start-controller ${SCRIPT_DIR}/ece361-start-controller
+
+    if [[ -f ${SCRIPT_DIR}/ece361-stop-controller ]]; then
+        sudo mv ${SCRIPT_DIR}/ece361-stop-controller ${SCRIPT_DIR}/.ece361-stop-controller.${TIMESTAMP}
+    fi
+    sudo cp ece361-stop-controller ${SCRIPT_DIR}/ece361-stop-controller
+
+    # VNC xstartup script
+    sudo cp xstartup /home/ubuntu/.vnc/xstartup && sudo chmod +x /home/ubuntu/.vnc/xstartup
+}
+
+update_all() {
     # Check if update script itself needs updating
-    update_update
+    [[ $# -eq 0 ]] && update_update
     echo
     update_ryu
     echo
     update_vm
     echo
+    update_misc ${TMPDIR}
+    echo
     green_desc "Finished updating"
+}
+
+# If this script is re-executed by previous update attempt, it will pass in the old directory
+TMPDIR=$1 # Global scope, where the Git repo w/ relevant VM files are temporarily stored
+if [[ $# -eq 1 && ! -d ${TMPDIR} ]]; then
+    yellow_desc "Error: ${TMPDIR} is not a directory, aborting..."
+    exit 255
+fi
+
+# Ensures whoever runs this has sudo access
+if [[ `sudo -n echo ok` != "ok" ]]; then
+    yellow_desc "This script can only be run by a user with sudo access without prompt"
+    echo && yellow_desc "Aborting update"
+    exit 255
+fi
+
+# Check internet connectivity first
+if [[ `ping -q -w 1 -c 1 8.8.8.8 > /dev/null && echo 'ok'` = 'ok' ]]; then
+    # Pass any params given to this script to update_all
+    update_all $@
 else
     # Check using 8.8.4.4
     if [[ `ping -q -w 1 -c 1 8.8.4.4 > /dev/null && echo 'ok'` = 'ok' ]]; then
-        update_update
-        echo
-        update_ryu
-        echo
-        update_vm
-        echo
-        green_desc "Finished updating"
+        # Pass any params given to this script to update_all
+        update_all $@
     else
         # Assuming it's a DHCP issue, try pinging gateway
         GATEWAY=`ip route | grep default | cut -d ' ' -f 3`
