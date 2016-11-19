@@ -79,22 +79,60 @@ function update_update() {
 }
 
 function update_ryu() {
-    cd /home/ubuntu/ryu && echo "Updating Ryu..." && sudo git pull -f origin of_lab
-    cd /usr/lib/python2.7/ryu_ofctl && echo "Updating ryu_ofctl..." && sudo git pull -f origin master
+    cd /home/ubuntu/ryu
+    blue_desc "Updating Ryu..." && sudo git pull -f origin of_lab
+    if [[ $? -gt 0 ]]; then
+        yellow_desc "Error while updating Ryu, please check error message"
+    else
+        green_desc "Successfully updated Ryu"
+    fi
+
+    echo
+    cd /usr/lib/python2.7/ryu_ofctl
+    blue_desc "Updating ryu_ofctl..." && sudo git pull -f origin master
+    if [[ $? -gt 0 ]]; then
+        yellow_desc "Error while updating ryu_ofctl, please check error message"
+    else
+        green_desc "Successfully updated ryu_ofctl"
+    fi
+}
+
+function update_vm() {
+    echo && blue_desc "Updating packages..."
+    sudo apt-get update
+
+    # Package installations
+    sudo apt-get install -y python-dpkt vnc4server
+
+    # Configurations
+    echo && blue_desc "Checking configurations..."
+    # Set VNC password to 'ece361'
+    vncpasswd << EOF
+ece361
+ece361
+EOF
 }
 
 # Check internet connectivity first
 if [[ `ping -q -w 1 -c 1 8.8.8.8 > /dev/null && echo 'ok'` = 'ok' ]]; then
     # Check if update script itself needs updating
     update_update
-
+    echo
     update_ryu
+    echo
+    update_vm
+    echo
+    green_desc "Finished updating"
 else
     # Check using 8.8.4.4
     if [[ `ping -q -w 1 -c 1 8.8.4.4 > /dev/null && echo 'ok'` = 'ok' ]]; then
         update_update
-
+        echo
         update_ryu
+        echo
+        update_vm
+        echo
+        green_desc "Finished updating"
     else
         # Assuming it's a DHCP issue, try pinging gateway
         GATEWAY=`ip route | grep default | cut -d ' ' -f 3`
