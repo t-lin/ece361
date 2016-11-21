@@ -2,7 +2,14 @@
 EXISTING_RYU_PID=`ps aux | grep ryu-manager | grep python | awk '{print $2}'`
 
 if [[ -z ${EXISTING_RYU_PID} ]]; then
-    screen -S ryu -d -m ryu-manager --flagfile /etc/ryu/ryu.conf ryu.app.simple_switch,ryu.app.ofctl_rest
+    # Default app list enables OF control APIs, topology-related APIs, and discovery app
+    APP_LIST=ryu.app.ofctl_rest,ryu.app.discovery,ryu.app.rest_discovery
+
+    if [[ "$1" == "switch" ]]; then
+        APP_LIST=${APP_LIST},ryu.app.simple_switch
+    fi
+
+    screen -S ryu -d -m ryu-manager --flagfile /etc/ryu/ryu.conf ${APP_LIST}
     sleep 1
     EXISTING_RYU_PID=`ps aux | grep ryu-manager | grep python | awk '{print $2}'`
     echo "Started new Ryu instance with PID ${EXISTING_RYU_PID}"
