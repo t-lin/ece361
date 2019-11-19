@@ -95,12 +95,12 @@ function update_misc() {
     if [[ -f ${SCRIPT_DIR}/ece361-start-controller ]]; then
         sudo mv ${SCRIPT_DIR}/ece361-start-controller ${SCRIPT_DIR}/.ece361-start-controller.${TIMESTAMP}
     fi
-    sudo cp ece361-start-controller ${SCRIPT_DIR}/ece361-start-controller
+    sudo cp sdn/ece361-start-controller ${SCRIPT_DIR}/ece361-start-controller
 
     if [[ -f ${SCRIPT_DIR}/ece361-stop-controller ]]; then
         sudo mv ${SCRIPT_DIR}/ece361-stop-controller ${SCRIPT_DIR}/.ece361-stop-controller.${TIMESTAMP}
     fi
-    sudo cp ece361-stop-controller ${SCRIPT_DIR}/ece361-stop-controller
+    sudo cp sdn/ece361-stop-controller ${SCRIPT_DIR}/ece361-stop-controller
 
     # Create VNC xstartup script if it doesn't already exist
     VNC_STARTUP_SCRIPT=/home/ubuntu/.vnc/xstartup
@@ -111,7 +111,7 @@ function update_misc() {
     # Create skeleton install_path.py script if it doesn't already exist (Lab 6)
     INSTALL_PATH_SCRIPT=/home/ubuntu/install_path.py
     if [[ ! -f ${INSTALL_PATH_SCRIPT} ]]; then
-        cp install_path.py ${INSTALL_PATH_SCRIPT} && chmod +x ${INSTALL_PATH_SCRIPT}
+        cp sdn/install_path.py ${INSTALL_PATH_SCRIPT} && chmod +x ${INSTALL_PATH_SCRIPT}
     fi
 
 }
