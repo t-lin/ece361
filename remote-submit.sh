@@ -1,30 +1,33 @@
 #!/bin/bash
 # NOTE: This script has less error checking than it should... Assumes the
-#       caller has done appropriate checks (designed to integrate w/ others).
+#       caller has done appropriate checks (e.g. ensuring the files exist).
 #       Generally a bad assumption.
 
 SCRIPT_DIR=$(cd $(dirname "$0") && pwd)
+SUBMIT_CMD=$(basename $0) # Works w/ symbolic links
 source ${SCRIPT_DIR}/echoHelpers
 unset ERR
+unset LISTING
 
-if [[ $# -lt 3 ]]; then
+if [[ $# -lt 2 ]]; then
     bold_blue "Usage format:"
-    blue "\tTo submit: remote-submit.sh <remote submit cmd> <lab num> <file1> [<file2> ...]"
-    blue "\tTo list submissions: remote-submit.sh <remote submit cmd> -l <lab num>"
+    blue "\tTo submit: ${SUBMIT_CMD} <lab num> <file1> [<file2> ...]"
+    blue "\tTo list submissions: ${SUBMIT_CMD} -l <lab num>"
     exit 1
 else
     # Add explicit path to submit command since it's not sourced during SSH
     # Currently all submit scripts are in /local/bin (both EECG and ECF),
     # so hopefully they don't change it...
-    SUBMIT_CMD=/local/bin/$1
+    SUBMIT_CMD=/local/bin/${SUBMIT_CMD}
 
-    if [[ "$2" == "-l" ]]; then
+    if [[ "$1" == "-l" ]]; then
         # echo "Listing submissions"
-        LAB_NUM=$3
+        LAB_NUM=$2
+        LISTING=1
     else
         # echo "Submitting files"
-        LAB_NUM=$2
-        SUBMISSIONS=${@:3:$#}
+        LAB_NUM=$1
+        SUBMISSIONS=${@:2:$#}
     fi
 fi
 
@@ -79,7 +82,7 @@ mkdir -p /tmp/ece361-ssh-ctrl
 SSHFLAGS+=" -o ControlPath=/tmp/ece361-ssh-ctrl/%r@%h:%p -o ControlMaster=auto -o ControlPersist=3m"
 SSHFLAGS+=" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
 
-if [[ "$2" == "-l" ]]; then
+if [[ $LISTING ]]; then
     # echo "Listing submissions"
     ssh ${SSHFLAGS} ${UTORID}@${EECG_HOST} ${SUBMIT_CMD} -l ${LAB_NUM}
 else

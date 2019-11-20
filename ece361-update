@@ -122,7 +122,7 @@ function update_misc() {
     fi
     sudo cp remote-submit.sh ${SCRIPT_DIR}/
     sudo cp echoHelpers ${SCRIPT_DIR}/
-    sudo rm -f submitece361f*
+    sudo rm -f ${SCRIPT_DIR}/submitece361*
     sudo ln -s ${SCRIPT_DIR}/remote-submit.sh ${SCRIPT_DIR}/submitece361f
     sudo ln -s ${SCRIPT_DIR}/remote-submit.sh ${SCRIPT_DIR}/submitece361s
 }
