@@ -30,6 +30,7 @@ function update_update() {
         if [[ -n ${DIFF} ]]; then
             # Save backup of current script and update the current script
             TIMESTAMP=`date +%s`
+            blue_desc "Update script has changed"
             blue_desc "Saving backup of current script to ${SCRIPT_DIR}/.${UPDATE_SCRIPT}.${TIMESTAMP}"
             sudo mv ${SCRIPT_DIR}/${UPDATE_SCRIPT} ${SCRIPT_DIR}/.${UPDATE_SCRIPT}.${TIMESTAMP}
         fi
@@ -38,9 +39,10 @@ function update_update() {
     # Have this case separate (i.e. not 'else' of previous), in case script was moved due to diff
     if [[ ! -f ${SCRIPT_DIR}/${UPDATE_SCRIPT} ]]; then
         # Copy script and execute it after 3 seconds and exit
+        blue_desc "Installing new update script..."
         sudo cp ${UPDATE_SCRIPT} ${SCRIPT_DIR}/${UPDATE_SCRIPT}
         sudo chmod +x ${SCRIPT_DIR}/${UPDATE_SCRIPT}
-        green_desc "Successfully updated ${UPDATE_SCRIPT}"
+        blue_desc "Successfully installed ${UPDATE_SCRIPT}"
         blue_desc "Exiting and executing new script in 3 seconds..."
         sleep 3 && ${SCRIPT_DIR}/${UPDATE_SCRIPT} `pwd` &
         exit 0
@@ -114,6 +116,15 @@ function update_misc() {
         cp sdn/install_path.py ${INSTALL_PATH_SCRIPT} && chmod +x ${INSTALL_PATH_SCRIPT}
     fi
 
+    # Installs or updates remote submission script
+    if [[ -f ${SCRIPT_DIR}/remote-submit.sh ]]; then
+        sudo mv ${SCRIPT_DIR}/remote-submit.sh ${SCRIPT_DIR}/.remote-submit.sh.${TIMESTAMP}
+    fi
+    sudo cp remote-submit.sh ${SCRIPT_DIR}/
+    sudo cp echoHelpers ${SCRIPT_DIR}/
+    sudo rm -f submitece361f*
+    sudo ln -s ${SCRIPT_DIR}/remote-submit.sh ${SCRIPT_DIR}/submitece361f
+    sudo ln -s ${SCRIPT_DIR}/remote-submit.sh ${SCRIPT_DIR}/submitece361s
 }
 
 update_all() {
