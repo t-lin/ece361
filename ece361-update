@@ -112,8 +112,8 @@ EOF
 }
 
 function update_automark() {
-    AUTOMARK_DIR=/usr/local/ece361-automark
-    if [[ ! -d /usr/local/ece361-automark ]]; then
+    AUTOMARK_DIR=/usr/local/tester
+    if [[ ! -d ${AUTOMARK_DIR} ]]; then
         sudo git clone https://github.com/t-lin/ece361-automark.git ${AUTOMARK_DIR}
     else
         blue "Updating tester... "
@@ -121,11 +121,13 @@ function update_automark() {
     fi
 
     if [[ $? -gt 0 ]]; then
-        yellow "Error while updating ece361-automark, please check error message"
+        yellow "Error while updating tester files, please check error message"
     else
-        green "Successfully updated ece361-automark"
+        green "Successfully updated tester files"
     fi
 
+    cd ${AUTOMARK_DIR}
+    SCRIPT_DIR=/usr/local/bin
     sudo rm -f ${SCRIPT_DIR}/ece361submit ${SCRIPT_DIR}/ece361exercise
     sudo ln -s ${AUTOMARK_DIR}/ece361submit.sh ${SCRIPT_DIR}/ece361submit
     sudo ln -s ${AUTOMARK_DIR}/run-public-tests.sh ${SCRIPT_DIR}/ece361exercise
