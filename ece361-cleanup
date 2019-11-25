@@ -1,0 +1,4 @@
+#!/bin/bash
+sudo killall xterm
+sudo killall mn
+sudo mn -c

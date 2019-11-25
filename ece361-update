@@ -131,11 +131,16 @@ function update_misc() {
     fi
     sudo cp sdn/ece361-stop-controller ${SCRIPT_DIR}/ece361-stop-controller
 
-    # Create VNC xstartup script if it doesn't already exist
+    # Create clean-up script
+    sudo cp ece361-cleanup ${SCRIPT_DIR}/ece361-cleanup
+
+    # Create VNC xstartup scripts
+    # User may modify the xstartup to customize it, so avoid overwriting it if it exists
     VNC_STARTUP_SCRIPT=/home/ubuntu/.vnc/xstartup
     if [[ ! -f ${VNC_STARTUP_SCRIPT} ]]; then
-        sudo cp xstartup ${VNC_STARTUP_SCRIPT} && sudo chmod +x ${VNC_STARTUP_SCRIPT}
+        sudo cp vnc/xstartup ${VNC_STARTUP_SCRIPT} && sudo chmod +x ${VNC_STARTUP_SCRIPT}
     fi
+    sudo cp vnc/ece361-vnc ${SCRIPT_DIR}/ece361-vnc
 
     # Create skeleton install_path.py script if it doesn't already exist (Lab 6)
     INSTALL_PATH_SCRIPT=/home/ubuntu/install_path.py

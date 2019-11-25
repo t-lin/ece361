@@ -1,0 +1,26 @@
+#!/bin/bash
+source /usr/local/ece361-wrapper-prints
+
+if [[ $# != 1 ]]; then
+    bold_red -n "ERROR: "
+    echo "Expecting at least one parameter: 'start' or 'stop'"
+    exit 1
+fi
+
+if [[ $1 == "start" ]]; then
+    if [[ -n `ps aux | grep Xvnc4 | grep 5901` ]]; then
+        bold_red -n "ERROR: "
+        echo "A VNC server session already exists (port 5901). Either connect to the current session or stop it, then re-start it"
+    else
+        vncserver -geometry 1280x720 -depth 24 :1
+
+        green "VNC server is now running and listening on port 5901"
+    fi
+elif [[ $1 == "stop" ]]; then
+    vncserver -kill :1
+
+	green "VNC server has been killed"
+else
+    bold_red -n "ERROR: "
+    echo "Expecting at least one parameter: 'start' or 'stop'"
+fi
