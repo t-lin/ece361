@@ -5,7 +5,7 @@
 
 SCRIPT_DIR=$(cd $(dirname "$0") && pwd)
 SUBMIT_CMD=$(basename $0) # Works w/ symbolic links
-source ${SCRIPT_DIR}/echoHelpers
+source /usr/local/ece361-wrapper-prints
 unset ERR
 unset LISTING
 

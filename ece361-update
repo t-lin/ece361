@@ -2,19 +2,39 @@
 # Thomas Lin (2016):
 #   Update script for the ECE361 VM image
 
-# Blue: "\e[1;34;40m $1 \e[0m"
-# Yellow: "\e[1;33;40m $1 \e[0m"
-# Green: "\e[1;32;40m $1 \e[0m"
-function green_desc() {
-    echo -e "\e[1;32;40m$1\e[0m"
+# Define these print wrappers here instead of sourcing ece361-wrapper-prints
+# We don't know if it exists in the system, or if it does, if it's old
+function green() {
+    if [ "$1" = "-n" ]; then
+        STRING=$2
+        FLAGS=-ne
+    else
+        STRING=$1
+        FLAGS=-e
+    fi
+    echo $FLAGS "\e[1;32;40m${STRING}\e[0m"
 }
 
-function blue_desc() {
-    echo -e "\e[1;34;40m$1\e[0m"
+function blue() {
+    if [ "$1" = "-n" ]; then
+        STRING=$2
+        FLAGS=-ne
+    else
+        STRING=$1
+        FLAGS=-e
+    fi
+    echo $FLAGS "\e[1;34;40m${STRING}\e[0m"
 }
 
-function yellow_desc() {
-    echo -e "\e[1;33;40m$1\e[0m"
+function yellow() {
+    if [ "$1" = "-n" ]; then
+        STRING=$2
+        FLAGS=-ne
+    else
+        STRING=$1
+        FLAGS=-e
+    fi
+    echo $FLAGS "\e[1;33;40m${STRING}\e[0m"
 }
 
 # Clones the ece361-vm repo and checks if the update script is itself updated
@@ -30,8 +50,8 @@ function update_update() {
         if [[ -n ${DIFF} ]]; then
             # Save backup of current script and update the current script
             TIMESTAMP=`date +%s`
-            blue_desc "Update script has changed"
-            blue_desc "Saving backup of current script to ${SCRIPT_DIR}/.${UPDATE_SCRIPT}.${TIMESTAMP}"
+            blue "Update script has changed"
+            blue "Saving backup of current script to ${SCRIPT_DIR}/.${UPDATE_SCRIPT}.${TIMESTAMP}"
             sudo mv ${SCRIPT_DIR}/${UPDATE_SCRIPT} ${SCRIPT_DIR}/.${UPDATE_SCRIPT}.${TIMESTAMP}
         fi
     fi
@@ -39,12 +59,15 @@ function update_update() {
     # Have this case separate (i.e. not 'else' of previous), in case script was moved due to diff
     if [[ ! -f ${SCRIPT_DIR}/${UPDATE_SCRIPT} ]]; then
         # Copy script and execute it after 3 seconds and exit
-        blue_desc "Installing new update script..."
+        blue "Installing new update script..."
         sudo cp ${UPDATE_SCRIPT} ${SCRIPT_DIR}/${UPDATE_SCRIPT}
         sudo chmod +x ${SCRIPT_DIR}/${UPDATE_SCRIPT}
-        blue_desc "Successfully installed ${UPDATE_SCRIPT}"
-        blue_desc "Exiting and executing new script in 3 seconds..."
-        sleep 3 && ${SCRIPT_DIR}/${UPDATE_SCRIPT} `pwd` &
+        blue "Successfully installed ${UPDATE_SCRIPT}"
+        for i in `seq 3 -1 1`; do
+            blue -n "\rExiting and executing new script in ${i} seconds..."
+            sleep 1
+        done
+        ${SCRIPT_DIR}/${UPDATE_SCRIPT} `pwd` &
         exit 0
     fi
 
@@ -53,33 +76,33 @@ function update_update() {
 
 function update_ryu() {
     cd /home/ubuntu/ryu
-    blue_desc "Updating Ryu..." && sudo git pull -f origin of_lab
+    blue "Updating Ryu..." && sudo git pull -f origin of_lab
     if [[ $? -gt 0 ]]; then
-        yellow_desc "Error while updating Ryu, please check error message"
+        yellow "Error while updating Ryu, please check error message"
     else
-        green_desc "Successfully updated Ryu"
+        green "Successfully updated Ryu"
     fi
 
     echo
     cd /usr/lib/python2.7/ryu_ofctl
-    blue_desc "Updating ryu_ofctl..." && sudo git pull -f origin master
+    blue "Updating ryu_ofctl..." && sudo git pull -f origin master
     if [[ $? -gt 0 ]]; then
-        yellow_desc "Error while updating ryu_ofctl, please check error message"
+        yellow "Error while updating ryu_ofctl, please check error message"
     else
-        green_desc "Successfully updated ryu_ofctl"
+        green "Successfully updated ryu_ofctl"
     fi
 }
 
 # Package installations and any other configuration modifications
 function update_vm() {
-    echo && blue_desc "Updating packages..."
+    echo && blue "Updating packages..."
     sudo apt-get update
 
     # Package installations
     sudo apt-get install -y python-dpkt vnc4server
 
     # Configurations
-    echo && blue_desc "Checking configurations..."
+    echo && blue "Checking configurations..."
 
     # Set VNC password to 'ece361' and configure for LXDE
     vncpasswd << EOF
@@ -94,6 +117,10 @@ function update_misc() {
 
     TIMESTAMP=`date +%s`
     SCRIPT_DIR=/usr/local/bin
+
+    # Install wrappers for echoing/printing
+    sudo cp ece361-wrapper-prints /usr/local/ece361-wrapper-prints
+
     if [[ -f ${SCRIPT_DIR}/ece361-start-controller ]]; then
         sudo mv ${SCRIPT_DIR}/ece361-start-controller ${SCRIPT_DIR}/.ece361-start-controller.${TIMESTAMP}
     fi
@@ -121,7 +148,6 @@ function update_misc() {
         sudo mv ${SCRIPT_DIR}/remote-submit.sh ${SCRIPT_DIR}/.remote-submit.sh.${TIMESTAMP}
     fi
     sudo cp remote-submit.sh ${SCRIPT_DIR}/
-    sudo cp echoHelpers ${SCRIPT_DIR}/
     sudo rm -f ${SCRIPT_DIR}/submitece361*
     sudo ln -s ${SCRIPT_DIR}/remote-submit.sh ${SCRIPT_DIR}/submitece361f
     sudo ln -s ${SCRIPT_DIR}/remote-submit.sh ${SCRIPT_DIR}/submitece361s
@@ -137,20 +163,20 @@ update_all() {
     echo
     update_misc ${TMPDIR}
     echo
-    green_desc "Finished updating"
+    green "Finished updating"
 }
 
 # If this script is re-executed by previous update attempt, it will pass in the old directory
 TMPDIR=$1 # Global scope, where the Git repo w/ relevant VM files are temporarily stored
 if [[ $# -eq 1 && ! -d ${TMPDIR} ]]; then
-    yellow_desc "Error: ${TMPDIR} is not a directory, aborting..."
+    yellow "Error: ${TMPDIR} is not a directory, aborting..."
     exit 255
 fi
 
 # Ensures whoever runs this has sudo access
 if [[ `sudo -n echo ok` != "ok" ]]; then
-    yellow_desc "This script can only be run by a user with sudo access without prompt"
-    echo && yellow_desc "Aborting update"
+    yellow "This script can only be run by a user with sudo access without prompt"
+    echo && yellow "Aborting update"
     exit 255
 fi
 
@@ -169,15 +195,15 @@ else
 
         if [[ `ping -q -w 1 -c 1 ${GATEWAY} > /dev/null && echo 'ok'` = 'ok' ]]; then
             # Gateway seems fine, but not internet... nothing we can do here
-            yellow_desc "Cannot access the Internet, check your connectivity"
+            yellow "Cannot access the Internet, check your connectivity"
         else
             # Assuming it's a DHCP issue, try to re-acquire IP address
-            yellow_desc "Cannot contact gateway. Trying to reset eth0..."
+            yellow "Cannot contact gateway. Trying to reset eth0..."
             ifdown eth0
             sleep 1
             ifup eth0
 
-            yellow_desc "Check your internet connectivity, and re-run this script once verified"
+            yellow "Check your internet connectivity, and re-run this script once verified"
         fi
     fi
 fi
