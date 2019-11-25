@@ -78,8 +78,8 @@ bold_blue "Connecting to UG EECG host..."
 read -p "UG EECG username: " UTORID
 
 # TODO: Remove below, but must first ensure VM has global ssh_config with control master
-mkdir -p /tmp/ece361-ssh-ctrl
-SSHFLAGS+=" -o ControlPath=/tmp/ece361-ssh-ctrl/%r@%h:%p -o ControlMaster=auto -o ControlPersist=3m"
+CTRL_PATH=`mktemp -d`
+SSHFLAGS+=" -o ControlPath=${CTRL_PATH}/%r@%h:%p -o ControlMaster=auto -o ControlPersist=3m"
 SSHFLAGS+=" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
 
 if [[ $LISTING ]]; then
@@ -94,4 +94,7 @@ else
     ssh ${SSHFLAGS} ${UTORID}@${EECG_HOST} "cd ${REMOTE_TMP_DIR} && ${SUBMIT_CMD} ${LAB_NUM} ${SUBMISSIONS}"
     ssh ${SSHFLAGS} ${UTORID}@${EECG_HOST} rm -rf ${REMOTE_TMP_DIR}
 fi
+
+# Clean-up SSH control master
+rm -rf ${CTRL_PATH}
 
