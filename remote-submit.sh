@@ -6,6 +6,7 @@
 SCRIPT_DIR=$(cd $(dirname "$0") && pwd)
 SUBMIT_CMD=$(basename $0) # Works w/ symbolic links
 source /usr/local/ece361-wrapper-prints
+source /usr/local/ece361-lib
 unset ERR
 unset LISTING
 
@@ -15,7 +16,7 @@ if [[ $# -lt 2 ]]; then
     blue "\tTo list submissions: ${SUBMIT_CMD} -l <lab num>"
     exit 1
 else
-    # Add explicit path to submit command since it's not sourced during SSH
+    # Add explicit path to submit command since it's not in the SSH session's PATH
     # Currently all submit scripts are in /local/bin (both EECG and ECF),
     # so hopefully they don't change it...
     SUBMIT_CMD=/local/bin/${SUBMIT_CMD}
@@ -70,31 +71,22 @@ function findAvailEECGHost() {
     ERR=1
 }
 
-findAvailEECGHost
-checkErr
-
 # Open SSH connection
-bold_blue "Connecting to UG EECG host..."
-read -p "UG EECG username: " UTORID
-
-# TODO: Remove below, but must first ensure VM has global ssh_config with control master
-CTRL_PATH=`mktemp -d`
-SSHFLAGS+=" -o ControlPath=${CTRL_PATH}/%r@%h:%p -o ControlMaster=auto -o ControlPersist=3m"
-SSHFLAGS+=" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+sshEECGOpenSess
+if [[ $? -ne 0 ]]; then
+    exit 1
+fi
 
 if [[ $LISTING ]]; then
-    # echo "Listing submissions"
-    ssh ${SSHFLAGS} ${UTORID}@${EECG_HOST} ${SUBMIT_CMD} -l ${LAB_NUM}
+    sshEECGRunCmd ${SUBMIT_CMD} -l ${LAB_NUM}
 else
-    # Create temporary directory in remote host, copy files to that directory,
-    # submit the files, then delete the remote directory
-    REMOTE_TMP_DIR=`ssh ${SSHFLAGS} ${UTORID}@${EECG_HOST} mktemp -d`
-    ssh ${SSHFLAGS} ${UTORID}@${EECG_HOST} chmod og-rwx ${REMOTE_TMP_DIR}
+    REMOTE_TMP_DIR=`sshEECGRunCmd mktemp -d`
+    sshEECGRunCmd chmod og-rwx ${REMOTE_TMP_DIR}
     scp ${SSHFLAGS} ${SUBMISSIONS} ${UTORID}@${EECG_HOST}:${REMOTE_TMP_DIR}
-    ssh ${SSHFLAGS} ${UTORID}@${EECG_HOST} "cd ${REMOTE_TMP_DIR} && ${SUBMIT_CMD} ${LAB_NUM} ${SUBMISSIONS}"
-    ssh ${SSHFLAGS} ${UTORID}@${EECG_HOST} rm -rf ${REMOTE_TMP_DIR}
+    sshEECGRunCmd "cd ${REMOTE_TMP_DIR} && ${SUBMIT_CMD} ${LAB_NUM} ${SUBMISSIONS}"
+    sshEECGRunCmd rm -rf ${REMOTE_TMP_DIR}
 fi
 
 # Clean-up SSH control master
-rm -rf ${CTRL_PATH}
+sshEECGCloseSess
 

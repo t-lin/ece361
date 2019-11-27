@@ -12,9 +12,6 @@ echo
 bold_blue "NOTE: You can always re-run this script if you change your mind later."
 echo
 
-CONSENT_FILE=~/.ece361-key-login
-KEY_FILE=~/.ssh/ece361-id_rsa
-
 unset CONSENT # Just in case it was already defined...
 while [[ ! -n ${CONSENT} ]]; do
     bold_blue -n "Enable passwordless access for exercise and submit? (yes/no) => "
@@ -24,10 +21,10 @@ while [[ ! -n ${CONSENT} ]]; do
     if [[ ${CONSENT} =~ [yY] ]]; then
         blue "Consent granted."
         blue "A new key will be generated and you will need to enter your credentials once to associate it with your UG EECG account."
-        touch ${CONSENT_FILE}
+        touch ${KEY_CONSENT_FILE}
     elif [[ ${CONSENT} =~ [nN] ]]; then
         blue "No consent. Removing any existing past keys that may have been created."
-        rm -f ${CONSENT_FILE} ${KEY_FILE}*
+        rm -f ${KEY_CONSENT_FILE} ${KEY_FILE}*
     else
         blue -n "Please enter either "; bold_green -n "\"y\""; blue -n " or "; bold_red "\"n\""
         unset CONSENT
@@ -35,7 +32,7 @@ while [[ ! -n ${CONSENT} ]]; do
 done
 
 echo
-if [[ -f ${CONSENT_FILE} ]]; then
+if [[ -f ${KEY_CONSENT_FILE} ]]; then
     # Re-use old keys or re-create? Re-create for now, more secure...
     rm -f ~/.ssh/ece361-id_rsa*
 
@@ -46,7 +43,7 @@ if [[ -f ${CONSENT_FILE} ]]; then
 
     findAvailEECGHost
     blue -n "Enter your UG EECG username: "; read UTORID
-    echo ${UTORID} > ${CONSENT_FILE}
+    echo ${UTORID} > ${KEY_CONSENT_FILE}
 
 	# Create a temporary SSH control path for control master
 	CTRL_PATH=`mktemp -d`

@@ -1,6 +1,7 @@
 #!/bin/bash
 # The shebang above is really just for vim to know this is a bash script
 # This script library is meant to be sourced by others
+source /usr/local/ece361-wrapper-prints
 
 # Find available UG EECG host to SSH into.
 #   - Checks if entry exist in DNS
@@ -28,6 +29,41 @@ function findAvailEECGHost() {
     done
 
     bold_red "ERROR: Unable to find available EECG host to connect to"
-    ERR=1
     return 255
 }
+
+KEY_CONSENT_FILE=~/.ece361-key-login
+KEY_FILE=~/.ssh/ece361-id_rsa
+
+# Opens an SSH session to EECG and stores the control master in a temp directory
+# If the user did not consent to using a key, prompt them for their UTORid
+function sshEECGOpenSess() {
+    findAvailEECGHost
+    if [[ $? -ne 0 ]]; then
+        return $?
+    fi
+
+    CTRL_PATH=`mktemp -d`
+    SSHFLAGS+=" -o ControlPath=${CTRL_PATH}/%r@%h:%p -o ControlMaster=auto -o ControlPersist=3m"
+    SSHFLAGS+=" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+
+    if [[ -f ${KEY_CONSENT_FILE} ]]; then
+        UTORID=`cat ${KEY_CONSENT_FILE}`
+        SSHFLAGS+=" -i ${KEY_FILE}"
+    else
+        blue -n "Enter your UG EECG username: "; read UTORID
+    fi
+
+    # Open SSH session; use a dummy command to avoid going into a remote shell
+    ssh ${SSHFLAGS} ${UTORID}@${EECG_HOST} "exit"
+}
+
+function sshEECGRunCmd() {
+    ssh ${SSHFLAGS} ${UTORID}@${EECG_HOST} $@
+}
+
+# Clean-up SSH control master
+function sshEECGCloseSess() {
+    rm -rf ${CTRL_PATH}
+}
+
