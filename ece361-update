@@ -143,6 +143,13 @@ function update_misc() {
     # Install wrappers for echoing/printing
     sudo cp ece361-wrapper-prints /usr/local/ece361-wrapper-prints
 
+    # Install lib file for scripts
+    sudo cp ece361-lib /usr/local/ece361-lib
+
+    # Install the init script
+    sudo cp ece361-init ${SCRIPT_DIR}/ece361-init
+
+    # Install start / stop scripts for Ryu controller
     if [[ -f ${SCRIPT_DIR}/ece361-start-controller ]]; then
         sudo mv ${SCRIPT_DIR}/ece361-start-controller ${SCRIPT_DIR}/.ece361-start-controller.${TIMESTAMP}
     fi

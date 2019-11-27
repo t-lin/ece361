@@ -1,0 +1,66 @@
+#!/bin/bash
+source /usr/local/ece361-wrapper-prints
+source /usr/local/ece361-lib
+
+blue "The exercise and submission processes in ths course requires access to the UG EECG system."
+blue "To avoid logging in repeatedly, this process can create a key that will be associated with your UG EECG account."
+blue "Using a key means that this virtual machine will have passwordless access to your UG EECG account."
+echo
+blue -n "If you consent, please enter "; bold_green -n "\"y\""; blue " below."
+blue -n "If you do not consent, please enter "; bold_red -n "\"n\""; blue ", but note that you will have to manually enter your credentials each time."
+echo
+bold_blue "NOTE: You can always re-run this script if you change your mind later."
+echo
+
+CONSENT_FILE=~/.ece361-key-login
+KEY_FILE=~/.ssh/ece361-id_rsa
+
+unset CONSENT # Just in case it was already defined...
+while [[ ! -n ${CONSENT} ]]; do
+    bold_blue -n "Enable passwordless access for exercise and submit? (yes/no) => "
+    read CONSENT
+    echo
+
+    if [[ ${CONSENT} =~ [yY] ]]; then
+        blue "Consent granted."
+        blue "A new key will be generated and you will need to enter your credentials once to associate it with your UG EECG account."
+        touch ${CONSENT_FILE}
+    elif [[ ${CONSENT} =~ [nN] ]]; then
+        blue "No consent. Removing any existing past keys that may have been created."
+        rm -f ${CONSENT_FILE} ${KEY_FILE}*
+    else
+        blue -n "Please enter either "; bold_green -n "\"y\""; blue -n " or "; bold_red "\"n\""
+        unset CONSENT
+    fi
+done
+
+echo
+if [[ -f ${CONSENT_FILE} ]]; then
+    # Re-use old keys or re-create? Re-create for now, more secure...
+    rm -f ~/.ssh/ece361-id_rsa*
+
+    bold_blue "Generating new key..."
+    mkdir -p ~/.ssh
+    ssh-keygen -f ${KEY_FILE} -q -N ""
+    PUB_KEY=`cat ${KEY_FILE}.pub`
+
+    findAvailEECGHost
+    blue -n "Enter your UG EECG username: "; read UTORID
+    echo ${UTORID} > ${CONSENT_FILE}
+
+	# Create a temporary SSH control path for control master
+	CTRL_PATH=`mktemp -d`
+	SSHFLAGS+=" -o ControlPath=${CTRL_PATH}/%r@%h:%p -o ControlMaster=auto -o ControlPersist=3m"
+	SSHFLAGS+=" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+    ssh ${SSHFLAGS} ${UTORID}@${EECG_HOST} "mkdir -p ~/.ssh"
+    ssh ${SSHFLAGS} ${UTORID}@${EECG_HOST} "touch ~/.ssh/authorized_keys"
+    ssh ${SSHFLAGS} ${UTORID}@${EECG_HOST} "chmod -R og-rwx ~/.ssh"
+    bold_blue "Associating key with your UG EECG account..."
+    ssh ${SSHFLAGS} ${UTORID}@${EECG_HOST} "echo ${PUB_KEY} >> ~/.ssh/authorized_keys"
+    ssh ${SSHFLAGS} ${UTORID}@${EECG_HOST} -O stop 2> /dev/null
+
+    # Clean-up SSH control master
+    rm -rf ${CTRL_PATH}
+fi
+
+bold_blue "Done"

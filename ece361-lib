@@ -1,0 +1,33 @@
+#!/bin/bash
+# The shebang above is really just for vim to know this is a bash script
+# This script library is meant to be sourced by others
+
+# Find available UG EECG host to SSH into.
+#   - Checks if entry exist in DNS
+#   - If entry exists, see if port 22 is up
+#
+# Sets 'EECG_HOST' environment variable to the candidate host
+#
+# Hoping this function "future-proofs" the process since EECG may
+# change the station names at any time or shut some down.
+function findAvailEECGHost() {
+    bold_blue "Finding available UG EECG host..."
+
+    # Count backwards from 254 since, at the time of script creation, more
+    # we know that more hosts are in the ug200+ range.
+    for i in `seq 254 -1 1`; do
+        EECG_HOST=ug${i}.eecg.utoronto.ca
+        EECG_HOST_IP=`dig ${EECG_HOST} +short`
+        if [[ -n ${EECG_HOST_IP} ]]; then
+            # Using 'nc' here to test since most systems have it
+            nc -z -w1 ${EECG_HOST_IP} 22
+            if [[ $? -eq 0 ]]; then
+                return
+            fi
+        fi
+    done
+
+    bold_red "ERROR: Unable to find available EECG host to connect to"
+    ERR=1
+    return 255
+}
