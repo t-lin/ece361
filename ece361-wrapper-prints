@@ -5,7 +5,8 @@ function command_desc() {
     read -p "Press [Enter] key to continue..."
 }
 
-function green() {
+# Sets the 'STRING' and 'FLAGS' environment variables
+function setFlagsString() {
     if [ "$1" = "-n" ]; then
         STRING=$2
         FLAGS=-ne
@@ -13,39 +14,25 @@ function green() {
         STRING=$1
         FLAGS=-e
     fi
+}
+
+function green() {
+    setFlagsString "$1" "$2"
     echo $FLAGS "\e[1;32;40m${STRING}\e[0m"
 }
 
 function blue() {
-    if [ "$1" = "-n" ]; then
-        STRING=$2
-        FLAGS=-ne
-    else
-        STRING=$1
-        FLAGS=-e
-    fi
+    setFlagsString "$1" "$2"
     echo $FLAGS "\e[1;34;40m${STRING}\e[0m"
 }
 
 function yellow() {
-    if [ "$1" = "-n" ]; then
-        STRING=$2
-        FLAGS=-ne
-    else
-        STRING=$1
-        FLAGS=-e
-    fi
+    setFlagsString "$1" "$2"
     echo $FLAGS "\e[1;33;40m${STRING}\e[0m"
 }
 
 function red() {
-    if [ "$1" = "-n" ]; then
-        STRING=$2
-        FLAGS=-ne
-    else
-        STRING=$1
-        FLAGS=-e
-    fi
+    setFlagsString "$1" "$2"
     echo $FLAGS "\e[1;31;40m${STRING}\e[0m"
 }
 
@@ -64,46 +51,22 @@ function blue_title() {
 }
 
 function bold_green() {
-    if [ "$1" = "-n" ]; then
-        STRING=$2
-        FLAGS=-ne
-    else
-        STRING=$1
-        FLAGS=-e
-    fi
-    echo $FLAGS "\e[1;92;40m$1\e[0m"
+    setFlagsString "$1" "$2"
+    echo $FLAGS "\e[1;92;40m${STRING}\e[0m"
 }
 
 function bold_blue() {
-    if [ "$1" = "-n" ]; then
-        STRING=$2
-        FLAGS=-ne
-    else
-        STRING=$1
-        FLAGS=-e
-    fi
-    echo $FLAGS "\e[1;94;40m$1\e[0m"
+    setFlagsString "$1" "$2"
+    echo $FLAGS "\e[1;94;40m${STRING}\e[0m"
 }
 
 function bold_yellow() {
-    if [ "$1" = "-n" ]; then
-        STRING=$2
-        FLAGS=-ne
-    else
-        STRING=$1
-        FLAGS=-e
-    fi
-    echo $FLAGS "\e[1;93;40m$1\e[0m"
+    setFlagsString "$1" "$2"
+    echo $FLAGS "\e[1;93;40m${STRING}\e[0m"
 }
 
 function bold_red() {
-    if [ "$1" = "-n" ]; then
-        STRING=$2
-        FLAGS=-ne
-    else
-        STRING=$1
-        FLAGS=-e
-    fi
-    echo $FLAGS "\e[1;91;40m$1\e[0m"
+    setFlagsString "$1" "$2"
+    echo $FLAGS "\e[1;91;40m${STRING}\e[0m"
 }
 
