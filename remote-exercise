@@ -1,0 +1,38 @@
+#!/bin/bash
+source /usr/local/ece361-lib
+
+if [[ $# -ne 1 ]]; then
+    EXERCISE_CMD=$(basename $0) # Works w/ symbolic links
+    bold_red "ERROR: Expecting exactly one parameter (the lab #)"
+    bold_blue "Usage format:"
+    blue "\t${EXERCISE_CMD} <lab #>"
+    exit 1
+else
+    LAB_NUM=$1
+fi
+
+MOUNT_DIR=/usr/local/tester
+sudo mkdir -p ${MOUNT_DIR}
+
+findAvailEECGHost
+if [[ $? -ne 0 ]]; then
+    exit 1
+fi
+
+if [[ -f ${KEY_CONSENT_FILE} ]]; then
+    UTORID=`cat ${KEY_CONSENT_FILE}`
+else
+    blue -n "Enter your UG EECG username: "; read UTORID
+fi
+
+# Mount (unmount first, just to be safe...)
+# TODO: REMOTE PATH TO MOUNT NEEDS TO BE CHANGED TO REFLECT PATH PROVIDED BY EECG
+sudo fusermount -q -u ${MOUNT_DIR}
+sudo sshfs -F /home/ubuntu/.ssh/config -o allow_other,reconnect ${UTORID}@${EECG_HOST}:/guest/l/linthom1/ece361/2020s/ece361-automark ${MOUNT_DIR}
+
+# Run exercise
+${MOUNT_DIR}/run-public-tests.sh ${LAB_NUM}
+
+# Unmount
+sudo fusermount -q -u ${MOUNT_DIR}
+

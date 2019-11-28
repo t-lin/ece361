@@ -111,28 +111,6 @@ ece361
 EOF
 }
 
-function update_automark() {
-    AUTOMARK_DIR=/usr/local/tester
-    if [[ ! -d ${AUTOMARK_DIR} ]]; then
-        sudo git clone https://github.com/t-lin/ece361-automark.git ${AUTOMARK_DIR}
-    else
-        blue "Updating tester... "
-        cd ${AUTOMARK_DIR} && sudo git pull -f origin master
-    fi
-
-    if [[ $? -gt 0 ]]; then
-        yellow "Error while updating tester files, please check error message"
-    else
-        green "Successfully updated tester files"
-    fi
-
-    cd ${AUTOMARK_DIR}
-    SCRIPT_DIR=/usr/local/bin
-    sudo rm -f ${SCRIPT_DIR}/ece361submit ${SCRIPT_DIR}/ece361exercise
-    sudo ln -s ${AUTOMARK_DIR}/ece361submit.sh ${SCRIPT_DIR}/ece361submit
-    sudo ln -s ${AUTOMARK_DIR}/run-public-tests.sh ${SCRIPT_DIR}/ece361exercise
-}
-
 # Expects to be called with a single input parameter, the directory where the ece361-vm repo is
 function update_misc() {
     cd $1
@@ -177,12 +155,20 @@ function update_misc() {
         cp sdn/install_path.py ${INSTALL_PATH_SCRIPT} && chmod +x ${INSTALL_PATH_SCRIPT}
     fi
 
+    # Installs or updates remote exercise script
+    if [[ -f ${SCRIPT_DIR}/remote-exercise ]]; then
+        sudo mv ${SCRIPT_DIR}/remote-exercise ${SCRIPT_DIR}/.remote-exercise.${TIMESTAMP}
+    fi
+    sudo cp remote-exercise ${SCRIPT_DIR}/
+    sudo rm -f ${SCRIPT_DIR}/ece361-exercise # Just in case...
+    sudo ln -s ${SCRIPT_DIR}/remote-exercise ${SCRIPT_DIR}/ece361-exercise
+
     # Installs or updates remote submission script
     if [[ -f ${SCRIPT_DIR}/remote-submit.sh ]]; then
         sudo mv ${SCRIPT_DIR}/remote-submit.sh ${SCRIPT_DIR}/.remote-submit.sh.${TIMESTAMP}
     fi
     sudo cp remote-submit.sh ${SCRIPT_DIR}/
-    sudo rm -f ${SCRIPT_DIR}/submitece361*
+    sudo rm -f ${SCRIPT_DIR}/submitece361* # Just in case...
     sudo ln -s ${SCRIPT_DIR}/remote-submit.sh ${SCRIPT_DIR}/submitece361f
     sudo ln -s ${SCRIPT_DIR}/remote-submit.sh ${SCRIPT_DIR}/submitece361s
 }
@@ -194,8 +180,6 @@ update_all() {
     update_ryu
     echo
     update_vm
-    echo
-    update_automark
     echo
     update_misc ${TMPDIR}
     echo
