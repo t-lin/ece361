@@ -67,3 +67,14 @@ function sshEECGCloseSess() {
     rm -rf ${CTRL_PATH}
 }
 
+# Sanity check of lab number
+function checkLabNum() {
+    LAB_NUM=$1
+
+    NUM_REGEX='^[0-9]+$'
+    if [[ ! ${LAB_NUM} =~ ${NUM_REGEX} ]]; then
+        bold_red "ERROR: Lab number must be a positive integer"
+        return 255
+    fi
+}
+

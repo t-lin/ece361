@@ -11,8 +11,11 @@ else
     LAB_NUM=$1
 fi
 
-MOUNT_DIR=/usr/local/tester
-sudo mkdir -p ${MOUNT_DIR}
+# Sanity check of lab number
+checkLabNum ${LAB_NUM}
+if [[ $? -ne 0 ]]; then
+    exit 1
+fi
 
 findAvailEECGHost
 if [[ $? -ne 0 ]]; then
@@ -24,6 +27,9 @@ if [[ -f ${KEY_CONSENT_FILE} ]]; then
 else
     blue -n "Enter your UG EECG username: "; read UTORID
 fi
+
+MOUNT_DIR=/usr/local/tester
+sudo mkdir -p ${MOUNT_DIR}
 
 # Mount (unmount first, just to be safe...)
 # TODO: REMOTE PATH TO MOUNT NEEDS TO BE CHANGED TO REFLECT PATH PROVIDED BY EECG

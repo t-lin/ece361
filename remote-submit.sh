@@ -33,43 +33,10 @@ else
 fi
 
 # Sanity check of lab number
-NUM_REGEX='^[0-9]+$'
-if [[ ! ${LAB_NUM} =~ ${NUM_REGEX} ]]; then
-    bold_red "ERROR: Lab number must be a positive integer"
+checkLabNum ${LAB_NUM}
+if [[ $? -ne 0 ]]; then
     exit 1
 fi
-
-# Checks if 'ERR' variable exists and has been set, and exit if so.
-function checkErr() {
-    if [[ $ERR ]]; then
-        exit 1
-    fi
-}
-
-# Find available UG EECG host to SSH into.
-#   - Checks if entry exist in DNS
-#   - If entry exists, see if port 22 is up
-# Hoping this function "future-proofs" the process since EECG may
-# change the station names at any time or shut some down.
-function findAvailEECGHost() {
-    bold_blue "Finding available UG EECG host..."
-
-    # Count backwards from 254 since, at the time of script creation, more
-    # we know that more hosts are in the ug200+ range.
-    for i in `seq 254 -1 1`; do
-        EECG_HOST=`dig ug${i}.eecg.utoronto.ca +short`
-        if [[ -n ${EECG_HOST} ]]; then
-            # Using 'nc' here to test since most systems have it
-            nc -z -w1 ${EECG_HOST} 22
-            if [[ $? -eq 0 ]]; then
-                return
-            fi
-        fi
-    done
-
-    bold_red "ERROR: Unable to find available EECG host to connect to"
-    ERR=1
-}
 
 # Open SSH connection
 sshEECGOpenSess
