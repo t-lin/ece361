@@ -44,18 +44,22 @@ function sshEECGOpenSess() {
     fi
 
     CTRL_PATH=`mktemp -d`
-    SSHFLAGS+=" -o ControlPath=${CTRL_PATH}/%r@%h:%p -o ControlMaster=auto -o ControlPersist=3m"
+    unset SSHFLAGS
+    SSHFLAGS+=" -o ControlPath=${CTRL_PATH}/%r@%h:%p -o ControlMaster=auto"
     SSHFLAGS+=" -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
 
     if [[ -f ${KEY_CONSENT_FILE} ]]; then
         UTORID=`cat ${KEY_CONSENT_FILE}`
-        SSHFLAGS+=" -i ${KEY_FILE}"
+        SSHFLAGS+=" -o IdentityFile=${KEY_FILE}" # Use -o for compatibility w/ sshfs
     else
         blue -n "Enter your UG EECG username: "; read UTORID
     fi
 
     # Open SSH session; use a dummy command to avoid going into a remote shell
-    ssh ${SSHFLAGS} ${UTORID}@${EECG_HOST} "exit"
+    # Manually specify ControlPersist here
+    #   - SSHFLAGS may be re-used by submit/exercise scripts to invoke sshfs
+    #     but sshfs currently does not work w/ ControlPersist
+    ssh ${SSHFLAGS} -o ControlPersist=3m ${UTORID}@${EECG_HOST} "exit"
 }
 
 function sshEECGRunCmd() {
@@ -64,7 +68,10 @@ function sshEECGRunCmd() {
 
 # Clean-up SSH control master
 function sshEECGCloseSess() {
+    ssh ${SSHFLAGS} ${UTORID}@${EECG_HOST} -O stop > /dev/null 2>&1
     rm -rf ${CTRL_PATH}
+    unset SSHFLAGS
+    unset CTRL_PATH
 }
 
 # Sanity check of lab number
@@ -78,3 +85,9 @@ function checkLabNum() {
     fi
 }
 
+# Checks if 'ERR' variable exists and has been set, and exit if so.
+function checkErr() {
+    if [[ $ERR ]]; then
+        exit 1
+    fi
+}
