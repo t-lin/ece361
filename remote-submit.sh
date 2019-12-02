@@ -39,9 +39,16 @@ if [[ $? -ne 0 ]]; then
 fi
 
 # Open SSH connection
-sshEECGOpenSess
-if [[ $? -ne 0 ]]; then
-    exit 1
+# If an old control path w/ SSH flags exist, skip opening a new session, since
+# there's likely an existing SSH connection we can re-use.
+unset NEW_CONNECTION
+if [[ ! -n ${CTRL_PATH} && ! -n ${SSHFLAGS} ]]; then
+    sshEECGOpenSess
+    if [[ $? -ne 0 ]]; then
+        exit 1
+    fi
+
+    NEW_CONNECTION=1
 fi
 
 if [[ $LISTING ]]; then
@@ -55,5 +62,8 @@ else
 fi
 
 # Clean-up SSH control master
-sshEECGCloseSess
+# Don't close session if we're re-using an old connection
+if [[ -n ${NEW_CONNECTION} ]]; then
+    sshEECGCloseSess
+fi
 
