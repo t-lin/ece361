@@ -58,9 +58,22 @@ if [[ "${COMMAND}" == "submit" ]]; then
     RET=$?
     if [[ $RET -eq 0 || $RET -eq 10 ]]; then
         if [[ $RET -eq 10 ]]; then
-            # Export IGNORE_MISSING_FILES to be used in submit script
-            export IGNORE_MISSING_FILES=yes
+            # Return value 10 indicates failed cases. It may be due to missing files.
+            # Re-confirm w/ user before continuing.
+            bold_yellow "One or more test cases have failed. Check the log files."
+            bold_yellow -n "Ignore and continue? (yes/no) => "
+            read IGNORE_MISSING_FILES
+            echo
+
+            if [[ ! ${IGNORE_MISSING_FILES} =~ [yY] ]]; then
+                exit 1
+            fi
         fi
+
+        # Even if return val was 0, there may be missing files (i.e. required files
+        # that didn't have test cases). This is the head TA's fault, skip them for now.
+        # Export IGNORE_MISSING_FILES to be used in submit script
+        export IGNORE_MISSING_FILES=yes
 
         # Run submit
         # Export SSH-related env vars so child processes can re-use them
