@@ -46,7 +46,7 @@ if [[ "${COMMAND}" == "submit" ]]; then
     # Mount (unmount first, just to be safe...)
     # TODO: REMOTE PATH TO MOUNT NEEDS TO BE CHANGED TO REFLECT PATH PROVIDED BY EECG
     sudo fusermount -q -u ${MOUNT_DIR}
-    sudo sshfs -o allow_other,reconnect ${SSHFLAGS} ${UTORID}@${EECG_HOST}:/guest/l/linthom1/ece361/2020s/ece361-automark ${MOUNT_DIR}
+    sudo sshfs -o allow_other,reconnect ${SSHFLAGS} ${UTORID}@${EECG_HOST}:/cad2/ece361s/2020s ${MOUNT_DIR}
 
     # Run exerciser. If files are missing, will prompt student if they want to continue.
     # Possible return statuses from exerciser:
