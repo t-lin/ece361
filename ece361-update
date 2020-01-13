@@ -149,12 +149,6 @@ function update_misc() {
     fi
     sudo cp vnc/ece361-vnc ${SCRIPT_DIR}/ece361-vnc
 
-    # Create skeleton install_path.py script if it doesn't already exist (Lab 6)
-    INSTALL_PATH_SCRIPT=/home/ubuntu/install_path.py
-    if [[ ! -f ${INSTALL_PATH_SCRIPT} ]]; then
-        cp sdn/install_path.py ${INSTALL_PATH_SCRIPT} && chmod +x ${INSTALL_PATH_SCRIPT}
-    fi
-
     # Installs or updates remote exercise script
     if [[ -f ${SCRIPT_DIR}/remote-exercise ]]; then
         sudo mv ${SCRIPT_DIR}/remote-exercise ${SCRIPT_DIR}/.remote-exercise.${TIMESTAMP}
