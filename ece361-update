@@ -1,5 +1,5 @@
 #!/bin/bash
-# Thomas Lin (2016):
+# Thomas Lin (2016 - 2020):
 #   Update script for the ECE361 VM image
 
 # Define these print wrappers here instead of sourcing ece361-wrapper-prints
@@ -99,7 +99,7 @@ function update_vm() {
     sudo apt-get update
 
     # Package installations
-    sudo apt-get install -y python-dpkt vnc4server
+    sudo apt-get install -y python-dpkt vnc4server sshfs lxsession-logout
 
     # Configurations
     echo && blue "Checking configurations..."
