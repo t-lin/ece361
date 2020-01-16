@@ -91,3 +91,10 @@ function checkErr() {
         exit 1
     fi
 }
+
+# Hard-code here for now. Will need to update this per semester.
+# Could auto-calculate current year and semester, but gets difficult when doing
+# development in one semester in preparation for the next (e.g. it would print
+# the next year and semester...)
+EECG_WORKING_PATH=/cad2/ece361s/2020s/
+
