@@ -31,7 +31,12 @@ sudo fusermount -q -u ${MOUNT_DIR}
 sudo sshfs -o allow_other,reconnect ${SSHFLAGS} ${UTORID}@${EECG_HOST}:${EECG_WORKING_PATH} ${MOUNT_DIR}
 
 # Run exercise
-${MOUNT_DIR}/run-public-tests.sh ${LAB_NUM}
+if [[ -f ${MOUNT_DIR}/run-public-tests.sh ]]; then
+    ${MOUNT_DIR}/run-public-tests.sh ${LAB_NUM}
+else
+    bold_red "ERROR: Exerciser is not yet ready"
+    bold_red "       If you believe this is a bug, please report this to the head TA"
+fi
 
 # Unmount
 sudo fusermount -q -u ${MOUNT_DIR}

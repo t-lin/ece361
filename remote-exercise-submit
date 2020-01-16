@@ -47,42 +47,47 @@ if [[ "${COMMAND}" == "submit" ]]; then
     sudo fusermount -q -u ${MOUNT_DIR}
     sudo sshfs -o allow_other,reconnect ${SSHFLAGS} ${UTORID}@${EECG_HOST}:${EECG_WORKING_PATH} ${MOUNT_DIR}
 
-    # Run exerciser. If files are missing, will prompt student if they want to continue.
-    # Possible return statuses from exerciser:
-    #   - 0: All good
-    #   - 1: Files were missing, bail out
-    #   - 10: Files were missing, ignore and continue
-    bold_blue "Running exerciser..."
-    ${MOUNT_DIR}/run-public-tests.sh ${LAB_NUM}
-    RET=$?
-    if [[ $RET -eq 0 || $RET -eq 10 ]]; then
-        if [[ $RET -eq 10 ]]; then
-            # Return value 10 indicates failed cases. It may be due to missing files.
-            # Re-confirm w/ user before continuing.
-            bold_yellow "One or more test cases have failed. Check the log files."
-            bold_yellow -n "Ignore and continue? (yes/no) => "
-            read IGNORE_MISSING_FILES
-            echo
+    if [[ -f ${MOUNT_DIR}/run-public-tests.sh ]]; then
+        # Run exerciser. If files are missing, will prompt student if they want to continue.
+        # Possible return statuses from exerciser:
+        #   - 0: All good
+        #   - 1: Files were missing, bail out
+        #   - 10: Files were missing, ignore and continue
+        bold_blue "Running exerciser..."
+        ${MOUNT_DIR}/run-public-tests.sh ${LAB_NUM}
+        RET=$?
+        if [[ $RET -eq 0 || $RET -eq 10 ]]; then
+            if [[ $RET -eq 10 ]]; then
+                # Return value 10 indicates failed cases. It may be due to missing files.
+                # Re-confirm w/ user before continuing.
+                bold_yellow "One or more test cases have failed. Check the log files."
+                bold_yellow -n "Ignore and continue? (yes/no) => "
+                read IGNORE_MISSING_FILES
+                echo
 
-            if [[ ! ${IGNORE_MISSING_FILES} =~ [yY] ]]; then
-                exit 1
+                if [[ ! ${IGNORE_MISSING_FILES} =~ [yY] ]]; then
+                    exit 1
+                fi
             fi
+
+            # Even if return val was 0, there may be missing files (i.e. required files
+            # that didn't have test cases). This is the head TA's fault, skip them for now.
+            # Export IGNORE_MISSING_FILES to be used in submit script
+            export IGNORE_MISSING_FILES=yes
+
+            # Run submit
+            # Export SSH-related env vars so child processes can re-use them
+            #   - ece361submit may call remote-submit which requires SSH
+            echo
+            bold_blue "Running submission..."
+            export CTRL_PATH SSHFLAGS UTORID EECG_HOST
+            ${MOUNT_DIR}/ece361submit.sh ${LAB_NUM}
+        elif [[ $RET -eq 1 ]]; then
+            bold_blue "Not ignoring missing files, skipping submit..."
         fi
-
-        # Even if return val was 0, there may be missing files (i.e. required files
-        # that didn't have test cases). This is the head TA's fault, skip them for now.
-        # Export IGNORE_MISSING_FILES to be used in submit script
-        export IGNORE_MISSING_FILES=yes
-
-        # Run submit
-        # Export SSH-related env vars so child processes can re-use them
-        #   - ece361submit may call remote-submit which requires SSH
-        echo
-        bold_blue "Running submission..."
-        export CTRL_PATH SSHFLAGS UTORID EECG_HOST
-        ${MOUNT_DIR}/ece361submit.sh ${LAB_NUM}
-    elif [[ $RET -eq 1 ]]; then
-        bold_blue "Not ignoring missing files, skipping submit..."
+    else
+        bold_red "ERROR: Exerciser is not yet ready"
+        bold_red "       If you believe this is a bug, please report this to the head TA"
     fi
 
     # Unmount
