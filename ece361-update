@@ -111,6 +111,34 @@ ece361
 EOF
 }
 
+# Functions almost like a 'cp' command with source and destination
+# If the destination file exists, and is different than the source file, then
+# a hidden timestamped backup is made before changing
+function install_file() {
+    TIMESTAMP=`date +%s`
+    SRC_FILE=$1
+    if [[ ! -f ${SRC_FILE} ]]; then
+        yellow "Error in install_file(), ${SRC_FILE} does not exist"
+        return 255
+    fi
+
+    DST_FILE=$2
+    if [[ -f ${DST_FILE} ]]; then
+        if [[ `diff ${SRC_FILE} ${DST_FILE} > /dev/null 2>&1` -ne 0 ]]; then
+            # Source and destination files differ
+            # Make hidden timestmaped backup before changing it
+            DST_FILE_BASENAME=`basename ${DST_FILE}`
+            DST_FILE_DIRNAME=`dirname ${DST_FILE}`
+            sudo mv ${DST_FILE} ${DST_FILE_DIRNAME}/.${DST_FILE_BASENAME}.${TIMESTAMP}
+        else
+            # Do nothing
+            return 0
+        fi
+    fi
+
+    sudo cp ${SRC_FILE} ${DST_FILE}
+}
+
 # Expects to be called with a single input parameter, the directory where the ece361-vm repo is
 function update_misc() {
     cd $1
@@ -119,52 +147,41 @@ function update_misc() {
     SCRIPT_DIR=/usr/local/bin
 
     # Install wrappers for echoing/printing
-    sudo cp ece361-wrapper-prints /usr/local/ece361-wrapper-prints
+    install_file ece361-wrapper-prints /usr/local/ece361-wrapper-prints
 
     # Install lib file for scripts
-    sudo cp ece361-lib /usr/local/ece361-lib
+    install_file ece361-lib /usr/local/ece361-lib
 
     # Install the init script
-    sudo cp ece361-init ${SCRIPT_DIR}/ece361-init
+    install_file ece361-init ${SCRIPT_DIR}/ece361-init
 
     # Install start / stop scripts for Ryu controller
-    if [[ -f ${SCRIPT_DIR}/ece361-start-controller ]]; then
-        sudo mv ${SCRIPT_DIR}/ece361-start-controller ${SCRIPT_DIR}/.ece361-start-controller.${TIMESTAMP}
-    fi
-    sudo cp sdn/ece361-start-controller ${SCRIPT_DIR}/ece361-start-controller
-
-    if [[ -f ${SCRIPT_DIR}/ece361-stop-controller ]]; then
-        sudo mv ${SCRIPT_DIR}/ece361-stop-controller ${SCRIPT_DIR}/.ece361-stop-controller.${TIMESTAMP}
-    fi
-    sudo cp sdn/ece361-stop-controller ${SCRIPT_DIR}/ece361-stop-controller
+    install_file sdn/ece361-start-controller ${SCRIPT_DIR}/ece361-start-controller
+    install_file sdn/ece361-stop-controller ${SCRIPT_DIR}/ece361-stop-controller
 
     # Create clean-up script
-    sudo cp ece361-cleanup ${SCRIPT_DIR}/ece361-cleanup
+    install_file ece361-cleanup ${SCRIPT_DIR}/ece361-cleanup
 
     # Create VNC xstartup scripts
     # User may modify the xstartup to customize it, so avoid overwriting it if it exists
     VNC_STARTUP_SCRIPT=/home/ubuntu/.vnc/xstartup
     if [[ ! -f ${VNC_STARTUP_SCRIPT} ]]; then
-        sudo cp vnc/xstartup ${VNC_STARTUP_SCRIPT} && sudo chmod +x ${VNC_STARTUP_SCRIPT}
+        install_file vnc/xstartup ${VNC_STARTUP_SCRIPT}
+        sudo chmod +x ${VNC_STARTUP_SCRIPT}
     fi
-    sudo cp vnc/ece361-vnc ${SCRIPT_DIR}/ece361-vnc
+    install_file vnc/ece361-vnc ${SCRIPT_DIR}/ece361-vnc
 
     # Installs or updates remote exercise script
-    if [[ -f ${SCRIPT_DIR}/remote-exercise ]]; then
-        sudo mv ${SCRIPT_DIR}/remote-exercise ${SCRIPT_DIR}/.remote-exercise.${TIMESTAMP}
-    fi
-    sudo cp remote-exercise ${SCRIPT_DIR}/
-    sudo rm -f ${SCRIPT_DIR}/ece361-exercise # Just in case...
-    sudo ln -s ${SCRIPT_DIR}/remote-exercise ${SCRIPT_DIR}/ece361-exercise
+    install_file remote-exercise ${SCRIPT_DIR}/ece361-exercise
 
-    # Installs or updates remote submission script
-    if [[ -f ${SCRIPT_DIR}/remote-submit.sh ]]; then
-        sudo mv ${SCRIPT_DIR}/remote-submit.sh ${SCRIPT_DIR}/.remote-submit.sh.${TIMESTAMP}
-    fi
-    sudo cp remote-submit.sh ${SCRIPT_DIR}/
+    # Installs or updates remote version of EECG's submission scripts
+    install_file remote-submit ${SCRIPT_DIR}/remote-submit
     sudo rm -f ${SCRIPT_DIR}/submitece361* # Just in case...
-    sudo ln -s ${SCRIPT_DIR}/remote-submit.sh ${SCRIPT_DIR}/submitece361f
-    sudo ln -s ${SCRIPT_DIR}/remote-submit.sh ${SCRIPT_DIR}/submitece361s
+    sudo ln -s ${SCRIPT_DIR}/remote-submit ${SCRIPT_DIR}/submitece361f
+    sudo ln -s ${SCRIPT_DIR}/remote-submit ${SCRIPT_DIR}/submitece361s
+
+    # Installs or updates remote submission script (runs exercise + submit)
+    install_file remote-exercise-submit ${SCRIPT_DIR}/ece361-submit
 }
 
 update_all() {
@@ -177,7 +194,7 @@ update_all() {
     echo
     update_misc ${TMPDIR}
     echo
-    green "Finished updating"
+    green "Finished updating (press any key to finish)"
 }
 
 # If this script is re-executed by previous update attempt, it will pass in the old directory
