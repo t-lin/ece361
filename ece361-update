@@ -182,6 +182,9 @@ function update_misc() {
 
     # Installs or updates remote submission script (runs exercise + submit)
     install_file remote-exercise-submit ${SCRIPT_DIR}/ece361-submit
+
+    # Installs or updates the lab init script
+    install_file ece361-lab-init ${SCRIPT_DIR}/ece361-lab-init
 }
 
 update_all() {
