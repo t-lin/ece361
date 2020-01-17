@@ -3,7 +3,7 @@ source /usr/local/ece361-wrapper-prints
 source /usr/local/ece361-lib
 
 blue "The exercise and submission processes in ths course requires access to the UG EECG system."
-blue "To avoid logging in repeatedly, this process can create a key that will be associated with your UG EECG account."
+blue "To avoid having to repeatedly type in your username and password, this process can create a key that will be associated with your UG EECG account."
 blue "Using a key means that this virtual machine will have passwordless access to your UG EECG account."
 echo
 blue -n "If you consent, please enter "; bold_green -n "\"y\""; blue " below."
@@ -24,6 +24,8 @@ while [[ ! -n ${CONSENT} ]]; do
         touch ${KEY_CONSENT_FILE}
     elif [[ ${CONSENT} =~ [nN] ]]; then
         blue "No consent. Removing any existing past keys that may have been created."
+
+        # NOTE: KEY_CONSENT_FILE and KEY_FILE are defined in ece361-lib
         rm -f ${KEY_CONSENT_FILE} ${KEY_FILE}*
     else
         blue -n "Please enter either "; bold_green -n "\"y\""; blue -n " or "; bold_red "\"n\""
@@ -34,7 +36,7 @@ done
 echo
 if [[ -f ${KEY_CONSENT_FILE} ]]; then
     # Re-use old keys or re-create? Re-create for now, more secure...
-    rm -f ~/.ssh/ece361-id_rsa*
+    rm -f ${KEY_FILE}*
 
     bold_blue "Generating new key..."
     mkdir -p ~/.ssh
