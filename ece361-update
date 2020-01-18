@@ -124,7 +124,8 @@ function install_file() {
 
     DST_FILE=$2
     if [[ -f ${DST_FILE} ]]; then
-        if [[ `diff ${SRC_FILE} ${DST_FILE} > /dev/null 2>&1` -ne 0 ]]; then
+        diff ${SRC_FILE} ${DST_FILE} > /dev/null 2>&1
+        if [[ $? -ne 0 ]]; then
             # Source and destination files differ
             # Make hidden timestmaped backup before changing it
             DST_FILE_BASENAME=`basename ${DST_FILE}`
