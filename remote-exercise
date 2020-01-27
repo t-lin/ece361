@@ -1,8 +1,8 @@
 #!/bin/bash
 source /usr/local/ece361-lib
 
+EXERCISE_CMD=$(basename $0) # Works w/ symbolic links
 if [[ $# -ne 1 ]]; then
-    EXERCISE_CMD=$(basename $0) # Works w/ symbolic links
     bold_red "ERROR: Expecting exactly one parameter (the lab #)"
     bold_blue "Usage format:"
     blue "\t${EXERCISE_CMD} <lab #>"
@@ -15,6 +15,21 @@ fi
 checkLabNum ${LAB_NUM}
 if [[ $? -ne 0 ]]; then
     exit 1
+fi
+
+# Find any pre-existing instances of exercise w/ this lab number and
+# kill it along with any direct child proccesses w/ same PGID
+#   - This may happen if students Ctrl+Z the exercise process...
+#
+# Don't pipe ps aux w/ greps, else it'll spawn child procs w/ same name
+PROCS=`ps aux`
+THIS_PID=`ps -o pid -p $$ | tail -n1`
+OLD_EXERCISE_PID=`echo "${PROCS}" | grep "${EXERCISE_CMD} ${LAB_NUM}" | grep -v ${THIS_PID} | awk '{print $2}'`
+if [[ -n ${OLD_EXERCISE_PID} ]]; then
+    bold_red -n "WARNING: "
+    red "Found old instance of exercise running... killing now to avoid conflicts with this run"
+    # xargs in case of multiple matches, kill all
+    echo "${OLD_EXERCISE_PID}" | xargs -I{} sudo kill -9 -{}
 fi
 
 # Open SSH connection
