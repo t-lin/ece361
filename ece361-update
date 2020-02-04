@@ -188,6 +188,18 @@ function update_misc() {
     install_file ece361-lab-init ${SCRIPT_DIR}/ece361-lab-init
 }
 
+function check_modules_reinstall() {
+    OPENVSWITCH_MODULE=`sudo lsmod | grep -i openvswitch`
+    if [[ ! -n ${OPENVSWITCH_MODULE} ]]; then
+        # This VM should have OVS installed and 'openvswitch' module loaded
+        # There's an odd case where installing VBox extensions prevent it from loading
+        # Work-around / fix is to re-install linux modules and rebuild the initramfs
+        sudo apt-get --reinstall install linux-modules-`uname -r`
+        sudo update-initramfs -u
+        green "You need to reboot your VM after the update finishes by running: sudo reboot now"
+    fi
+}
+
 update_all() {
     # Check if update script itself needs updating
     [[ $# -eq 0 ]] && update_update
@@ -197,6 +209,8 @@ update_all() {
     update_vm
     echo
     update_misc ${TMPDIR}
+    echo
+    check_modules_reinstall
     echo
     green "Finished updating (press any key to finish)"
 }
