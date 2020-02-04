@@ -186,6 +186,12 @@ function update_misc() {
 
     # Installs or updates the lab init script
     install_file ece361-lab-init ${SCRIPT_DIR}/ece361-lab-init
+
+    # Update Geany's editor:
+    #   - Set font to Sans (underscore does not show in Monospace)
+    #   - Use spaces by default (instead of tabs)
+    sed -i 's/editor_font=Monospace/editor_font=Sans/g' /home/ubuntu/.config/geany/geany.conf
+    sed -i 's/indent_type=1/indent_type=0/g' /home/ubuntu/.config/geany/geany.conf
 }
 
 function check_modules_reinstall() {
