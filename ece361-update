@@ -193,6 +193,19 @@ function update_misc() {
     #   - Use spaces by default (instead of tabs)
     sed -i 's/editor_font=Monospace/editor_font=Sans/g' /home/ubuntu/.config/geany/geany.conf
     sed -i 's/indent_type=1/indent_type=0/g' /home/ubuntu/.config/geany/geany.conf
+
+    if [[ ! -f /usr/local/bin/pypy3 ]]; then
+        # Download and install PyPy3 v7.3.0
+        sudo mkdir -p /opt/ /usr/local/bin/
+        PYPY_VERS=pypy3.6-v7.3.0-linux64
+        wget -q --show-progress https://bitbucket.org/pypy/pypy/downloads/${PYPY_VERS}.tar.bz2 -P /tmp/
+        sudo tar -xvf /tmp/${PYPY_VERS}.tar.bz2 -C /opt/
+
+        sudo rm -f /usr/local/bin/pypy3 /usr/local/bin/pypy # Just to be safe
+        sudo ln -s /opt/${PYPY_VERS}/bin/pypy3 /usr/local/bin/pypy3
+        sudo ln -s pypy3 /usr/local/bin/pypy
+    fi
+
 }
 
 function check_modules_reinstall() {
