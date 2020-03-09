@@ -40,7 +40,7 @@ KEY_FILE=~/.ssh/ece361-id_rsa
 function sshEECGOpenSess() {
     findAvailEECGHost
     if [[ $? -ne 0 ]]; then
-        return $?
+        return 255
     fi
 
     CTRL_PATH=`mktemp -d`
